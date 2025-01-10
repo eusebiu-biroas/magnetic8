@@ -6,4 +6,5 @@ export default interface CanvasContext {
 	saveProgress(toFile: boolean): void;
 	loadProgress(json: string, add:boolean): void;
 	saveCanvasToImage(): void;
+	addBookmark(): void;
 }

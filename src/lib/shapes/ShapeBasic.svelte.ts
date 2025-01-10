@@ -4,7 +4,8 @@ import {
 	canvasStatus,
 	keyWatcherConfig,
 	KeyWatcherMode,
-	selectedShapes
+	selectedShapes,
+	shapes
 } from '$lib/shared.svelte.js';
 
 interface Point {
@@ -56,10 +57,12 @@ export class ShapeBasic implements Shape {
 	}
 
 	draw(ctx: CanvasRenderingContext2D): void {
-		this.drawShape(ctx);
+		if (this.visible) {
+			this.drawShape(ctx);
+		}
 
 		if (
-			keyWatcherConfig.mode === KeyWatcherMode.FIND ||
+			(!this.locked && keyWatcherConfig.mode === KeyWatcherMode.FIND) ||
 			keyWatcherConfig.mode === KeyWatcherMode.SELECTION_MAGNET_RIGHT ||
 			keyWatcherConfig.mode === KeyWatcherMode.SELECTION_MAGNET_LEFT ||
 			keyWatcherConfig.mode === KeyWatcherMode.SELECTION_MAGNET_TOP ||
@@ -212,7 +215,7 @@ export class ShapeBasic implements Shape {
 	}
 
 	drawShape(ctx: CanvasRenderingContext2D) {
-		console.log('drawShape Basic',ctx);
+		console.log('drawShape Basic', ctx);
 	}
 
 	protected drawSize(ctx: CanvasRenderingContext2D) {
@@ -260,32 +263,32 @@ export class ShapeBasic implements Shape {
 		ctx.translate(-(this.x + this.w / 2), -(this.y + this.h / 2));
 		// Start a new Path
 		ctx.beginPath();
-		ctx.moveTo(0, this.y);
-		ctx.lineTo(canvasStatus.width, this.y);
+		ctx.moveTo(0 + camera.x, this.y);
+		ctx.lineTo(canvasStatus.width + camera.x, this.y);
 
 		// Draw the Path
 		ctx.stroke();
 
 		// Start a new Path
 		ctx.beginPath();
-		ctx.moveTo(0, this.y + this.h);
-		ctx.lineTo(canvasStatus.width, this.y + this.h);
+		ctx.moveTo(0 + camera.x, this.y + this.h);
+		ctx.lineTo(canvasStatus.width + camera.x, this.y + this.h);
 
 		// Draw the Path
 		ctx.stroke();
 
 		// Start a new Path
 		ctx.beginPath();
-		ctx.moveTo(this.x, 0);
-		ctx.lineTo(this.x, canvasStatus.height);
+		ctx.moveTo(this.x, 0 + camera.y);
+		ctx.lineTo(this.x, canvasStatus.height + camera.y);
 
 		// Draw the Path
 		ctx.stroke();
 
 		// Start a new Path
 		ctx.beginPath();
-		ctx.moveTo(this.x + this.w, 0);
-		ctx.lineTo(this.x + this.w, canvasStatus.height);
+		ctx.moveTo(this.x + this.w, 0 + camera.y);
+		ctx.lineTo(this.x + this.w, canvasStatus.height + camera.y);
 
 		// Draw the Path
 		ctx.stroke();
@@ -814,11 +817,12 @@ export class ShapeBasic implements Shape {
 		return Math.round(num * factor) / factor;
 	};
 
-	scale(scaleWidth: number, scaleHeight: number, isMagnetic: boolean = false): void {
+	scale(scaleWidth: number, scaleHeight: number, ignoreMagnetism: boolean = false): void {
 		if (this.type == 'circle') {
 			this.borderRoundness = this.w / 2;
 		}
-		if (this.magnetizedChildren.length == 0) {
+
+		if (this.magnetizedChildren.length == 0 || ignoreMagnetism) {
 			this.w += scaleWidth;
 			this.h += scaleHeight;
 
@@ -911,6 +915,18 @@ export class ShapeBasic implements Shape {
 		if (shape === this) {
 			return;
 		}
+		if (shape.magnetizedChildren.length>0) {
+			let abort = false;
+			shape.magnetizedChildren.forEach(item => {
+				if(item.magnetizedChildren.length>0) {
+					abort= true;
+				}
+			})
+			if(abort) {
+				// alert('Magnetic force too low. In the current version the magnetic force supports only 3 layers.');
+				// return;
+			}
+		}
 		if (mode == KeyWatcherMode.SELECTION_MAGNET_LEFT) {
 			shape.x = this.x - shape.w - multiplier;
 			shape.y = this.y;
@@ -931,13 +947,13 @@ export class ShapeBasic implements Shape {
 			shape.y = this.y + this.h + multiplier;
 		}
 
-		if (this.magnetizedParents.length > 0) {
-			this.magnetizedParents[0].magnetizedChildren.push(shape);
-			shape.magnetizedParents.push(this.magnetizedParents[0]);
-		} else {
-			this.magnetizedChildren.push(shape);
-			shape.magnetizedParents.push(this);
-		}
+		// if (this.magnetizedParents.length > 0) {
+		// 	this.magnetizedParents[0].magnetizedChildren.push(shape);
+		// 	shape.magnetizedParents.push(this.magnetizedParents[0]);
+		// } else {
+		this.magnetizedChildren.push(shape);
+		shape.magnetizedParents.push(this);
+		// }
 	}
 
 	protected applyOpacity(color: string, opacity: number): string {
@@ -981,7 +997,7 @@ export class ShapeBasic implements Shape {
 	}
 
 	adjustColor1(color: string, magnetize: boolean): void {
-		console.log(color,magnetize);
+		console.log(color, magnetize);
 	}
 
 	adjustColor1Opacity(incrementValue: number, magnetize: boolean): void {
@@ -1014,4 +1030,39 @@ export class ShapeBasic implements Shape {
 		}
 	}
 
+	Delete(): void {
+		this.magnetizedParents.forEach((parent) => {
+			const indexOfChild = parent.magnetizedChildren.indexOf(this);
+			if (indexOfChild > -1) {
+				parent.magnetizedChildren.splice(indexOfChild, 1);
+			}
+		});
+
+		this.magnetizedChildren.forEach((child) => child.Delete());
+		const indexOf = shapes.indexOf(this);
+
+		shapes.splice(indexOf, 1);
+	}
+
+	toggleLock(forceLock: boolean): void {
+		if (forceLock) {
+			this.locked = true;
+		} else {
+			this.locked = !this.locked;
+		}
+		this.magnetizedChildren.forEach((child) => {
+			child.toggleLock(this.locked);
+		});
+	}
+
+	toggleVisible(forceVisibility: boolean): void {
+		if (forceVisibility) {
+			this.visible = true;
+		} else {
+			this.visible = !this.visible;
+		}
+		this.magnetizedChildren.forEach((child) => {
+			child.toggleVisible(this.visible);
+		});
+	}
 }

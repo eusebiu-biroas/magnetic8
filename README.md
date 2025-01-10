@@ -5,8 +5,7 @@ A keyboard-centric drawing application with an infinite canvas, inspired by Vim 
 🌐 **[Try Magnetic8 Online](http://magnetic8.com.s3-website.eu-central-1.amazonaws.com/)**
 
 ## Demonstration
-
-[![Magnetic8 Demo](https://img.youtube.com/vi/YOUTUBE_VIDEO_ID_HERE/0.jpg)](https://www.youtube.com/watch?v=YOUTUBE_VIDEO_ID_HERE "Magnetic8 Demo")
+[![Magnetic8 Demo](https://img.youtube.com/vi/IQqJtjXmK10/0.jpg)](https://www.youtube.com/watch?v=IQqJtjXmK10 "Magnetic8 Demo")
 
 Watch the demonstration video to see Magnetic8 in action:
 - Real-time demonstration of keyboard controls
@@ -78,7 +77,7 @@ After selecting a shape, various transformation modes become available:
 After selecting a shape, activate magnetic mode by pressing <kbd>M</kbd>:
 
 - Use <kbd>H</kbd>, <kbd>J</kbd>, <kbd>K</kbd>, <kbd>L</kbd> to attract other shapes using the magnetic force, the magnetized shape will change the position to be near the parent shape [TODO]
-- use <kbd>M</kbd> again to magnetize other shapes without changing their position
+- press <kbd>M</kbd> again to magnetize other shapes without changing their position
 - use [TODO] to demagnetize 
 
 ### Color Mode

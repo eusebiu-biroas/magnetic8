@@ -3,6 +3,7 @@
 	import { keyWatcherConfig, KeyWatcherMode, selectedShapes } from '$lib/shared.svelte';
 
 	const colors = [
+		{ 'name': 'svelte', 'rgb': 'rgb(255, 71, 0)', 'families': ['svelte'] },
 		// Gray
 		{ 'name': 'gray-50', 'rgb': 'rgb(249, 250, 251)', 'families': ['gray', 'tailwind'] },
 		{ 'name': 'gray-100', 'rgb': 'rgb(243, 244, 246)', 'families': ['gray', 'tailwind'] },
@@ -1861,10 +1862,10 @@
 	}
 
 	$effect(() => {
-		if (inputValue) {
+		if (inputValue||true) {
 			suggestions = colors
 				.filter(color => (color.name.replace('-', '').toLowerCase().includes(inputValue.replace('-', '').toLowerCase()) || color.families.includes(inputValue.toLowerCase())))
-				.slice(0, 15);
+				.slice(0, 3000);
 		} else {
 			suggestions = [];
 		}

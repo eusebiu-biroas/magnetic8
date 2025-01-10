@@ -55,4 +55,10 @@ export default interface Shape {
 	adjustColor1Opacity(incrementValue: number, magnetize: boolean): void;
 
 	adjustColor2Opacity(incrementValue: number, magnetize: boolean): void;
+
+	toggleVisible(forceVisibility: boolean): void;
+
+	toggleLock(forceLock: boolean): void;
+
+	Delete(): void;
 }

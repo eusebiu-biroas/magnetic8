@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { camera, canvasStatus, keyWatcherConfig, KeyWatcherMode } from '$lib/shared.svelte';
-	let left = $derived(camera.x);
-	let right = $derived(canvasStatus.width + camera.x);
+	let left = $derived(Math.round(camera.x));
+	let right = $derived(Math.round(canvasStatus.width + camera.x));
 	let maxWidth = $derived(Math.abs(canvasStatus.xMin) + canvasStatus.xMax);
 	let xWidth = $derived(canvasStatus.width * 100 / maxWidth);
 	let xMarginLeft = $derived((camera.x - canvasStatus.xMin) * 100 / maxWidth);

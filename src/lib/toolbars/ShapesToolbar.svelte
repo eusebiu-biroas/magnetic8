@@ -40,7 +40,8 @@
 			<button>
 				<img class="w-[32px]" src={shapeDefinition.image} alt={shapeDefinition.type} />
 				{#if keyWatcherConfig.mode == KeyWatcherMode.INSERT}
-					<div class="absolute bg-amber-300 text-black px-2  text-sm ml-1 rounded-sm">{shapeDefinition.hint.toUpperCase()}</div>
+					<div
+						class="absolute bg-amber-300 text-black px-2  text-sm ml-1 rounded-sm">{shapeDefinition.hint.toUpperCase()}</div>
 				{/if}
 			</button>
 		{/each}
@@ -48,15 +49,15 @@
 		<div class="w-px h-[100%] bg-gray-500"></div>
 		<button id="newCanvas" onclick={newCanvas}>
 			<img alt="new" class="w-[32px]" src="icons/new.svg" />
-			<div class="absolute bg-amber-300 text-black px-2 -bottom-4 text-sm ml-1 rounded-sm">+</div>
+
+			{#if keyWatcherConfig.mode == KeyWatcherMode.STANDARD}
+				<div class="absolute bg-amber-300 text-black px-2 -bottom-4 text-sm ml-1 rounded-sm">+</div>
+			{/if}
 		</button>
 
 		<Saver></Saver>
 		<Loader></Loader>
-<!--		<button>-->
-<!--			<img alt="open" class="w-[32px]" src="icons/open2.svg" />-->
-<!--			<div class="absolute bg-amber-300 text-black px-2 -bottom-4 text-sm ml-1 rounded-sm">O</div>-->
-<!--		</button>-->
+
 	</div>
 
 

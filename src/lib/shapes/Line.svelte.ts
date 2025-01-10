@@ -132,6 +132,8 @@ export class Line extends ShapeBasic {
 		clone.opacityColor2 = this.opacityColor2;
 		clone.lineWidth = this.lineWidth;
 		clone.borderRoundness = this.borderRoundness;
+		clone.isArrow = this.isArrow;
+		clone.isDotted = this.isDotted;
 		shapes.push(clone);
 		return clone;
 	}

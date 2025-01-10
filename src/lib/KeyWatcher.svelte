@@ -20,16 +20,25 @@
 	let MULTIPLIER_MODE: boolean = false;
 	console.log(canvasContext);
 
-	function createHints(exclude: string, includeMagnetizedChildren: boolean) {
+	function createHints(exclude: string, includeMagnetizedChildren: boolean, includeLocked: boolean = false) {
 		// Create hints using letters, excluding similar looking characters
-		const chars = 'asdfghjklqwertyuiopzxcvbnm';
+		let chars = 'asdfghjklqwertyuiopzxcvbnm';
 		if (exclude) {
-			chars.replace(exclude, '');
+			exclude.split('').forEach(letter => {
+				chars = chars.replace(letter, '');
+			});
 		}
 
 		shapes.forEach(item => item.hint = '');
 
 		let shapesForHints = shapes.filter(item => item.magnetizedParents.length == 0 || includeMagnetizedChildren);
+		if(!includeLocked) {
+			shapesForHints = shapesForHints.filter(item => !item.locked);
+		}
+
+		if (keyWatcherConfig.mode == KeyWatcherMode.BOOKMARKS) {
+			shapesForHints = shapesForHints.filter(item => item.type == 'bookmark');
+		}
 
 		// Calculate how many characters we need per hint to accommodate all shapes
 		const hintLength = Math.ceil(Math.log(shapesForHints.length) / Math.log(chars.length));
@@ -114,7 +123,7 @@
 					break;
 				}
 
-				let selectionEligible = e.altKey ? shapes : shapes.filter(item => item.magnetizedParents.length == 0);
+				let selectionEligible = e.altKey ? shapes : shapes.filter(item => item.magnetizedParents.length == 0 && !item.locked);
 
 
 				if (!e.shiftKey) {
@@ -188,6 +197,50 @@
 			return;
 		}
 
+		if (keyWatcherConfig.mode == KeyWatcherMode.BOOKMARKS) {
+			if (e.keyCode == KeyCode.B) {
+				canvasContext.addBookmark();
+				createHints('bf', false);
+				canvasStatus.hintSearched = '';
+
+			} else if (e.keyCode != KeyCode.Shift) {
+				canvasStatus.hintSearched += e.key;
+				let find = shapes.find(item => item.hint.toLowerCase() == canvasStatus.hintSearched.toLowerCase());
+				if (find) {
+					if (e.shiftKey) {
+						shapes.splice(shapes.indexOf(find), 1);
+					} else {
+						camera.x = find.x;
+						camera.y = find.y;
+						camera.z = find.z;
+
+						canvasContext.draw();
+
+					}
+					canvasStatus.hintSearched = '';
+
+					return;
+					// keyWatcherConfig.mode = KeyWatcherMode.SELECTION_MAGNET;
+				}
+				;
+			}
+			// switch (e.keyCode) {
+			// 	case KeyCode.B:
+			// 		alert('add');
+			// 		break;
+			// 	case KeyCode.S:
+			// 		document.getElementById('importJson')?.click();
+			// 		break;
+			// 	case KeyCode.D:
+			// 		document.getElementById('loadLocalStorage')?.click();
+			// 		break;
+			// 	case KeyCode.Escape:
+			// 		document.getElementById('closeLoader')?.click();
+			// 		break;
+			// }
+			return;
+		}
+
 		if (keyWatcherConfig.mode == KeyWatcherMode.SELECTION_MAGNET_RIGHT
 			|| keyWatcherConfig.mode == KeyWatcherMode.SELECTION_MAGNET_LEFT
 			|| keyWatcherConfig.mode == KeyWatcherMode.SELECTION_MAGNET_TOP
@@ -205,7 +258,7 @@
 
 		if (keyWatcherConfig.mode == KeyWatcherMode.SELECTION_MAGNETIZE_MULTIPLE) {
 			if (e.shiftKey && e.keyCode == KeyCode.A) {
-				shapes.forEach(item => selectedShapes[0].magnetize(item, 0, keyWatcherConfig.mode));
+				shapes.filter(item => item.magnetizedParents.length == 0).forEach(item => selectedShapes[0].magnetize(item, 0, keyWatcherConfig.mode));
 			}
 			canvasStatus.hintSearched += e.key;
 			let find = shapes.find(item => item.hint == canvasStatus.hintSearched);
@@ -240,7 +293,8 @@
 					return;
 				}
 				if (e.keyCode == KeyCode.Enter) {
-					item.text += '\n';
+					item.text = item.text.substring(0, item.caretPosition) + '\n' + item.text.substring(item.caretPosition, item.text.length);
+
 					item.caretPosition++;
 				} else if (e.keyCode == KeyCode.Backspace && item.text.length > 0) {
 					item.text = item.text.substring(0, item.caretPosition - 1) + item.text.substring(item.caretPosition, item.text.length);
@@ -258,7 +312,7 @@
 		}
 
 		if (keyWatcherConfig.mode == KeyWatcherMode.INSERT) {
-			const shapeDefinition = shapesDefinition.find(item => item.hint == e.key);
+			const shapeDefinition = shapesDefinition.find(item => item.hint == e.key.toLowerCase());
 			if (shapeDefinition) {
 				canvasContext.addShape(shapeDefinition.type);
 				return;
@@ -286,15 +340,7 @@
 			switch (e.keyCode) {
 				case KeyCode.D:
 					selectedShapes.forEach(item => {
-						let indexOf = shapes.indexOf(item);
-						item.magnetizedParents.forEach(parent => {
-							let indexOfChild = parent.magnetizedChildren.indexOf(item);
-							if (indexOfChild > -1) {
-								parent.magnetizedChildren.splice(indexOfChild, 1);
-							}
-						});
-
-						shapes.splice(indexOf, 1);
+						item.Delete();
 					});
 					selectedShapes.length = 0;
 					break;
@@ -322,8 +368,30 @@
 						item.translate(multiplier.SELECTION_TRANSLATION, 0);
 					});
 					break;
-				case 77:
-					keyWatcherConfig.mode = KeyWatcherMode.SELECTION_MAGNET;
+				case KeyCode.M:
+					if (!e.shiftKey) {
+						keyWatcherConfig.mode = KeyWatcherMode.SELECTION_MAGNET;
+					} else {
+						selectedShapes.forEach(shape => {
+							if (shape.magnetizedParents.length > 0) {
+								const parentsToRemove = [...shape.magnetizedParents];
+								parentsToRemove.forEach(parent => {
+									let indexOfChild = parent.magnetizedChildren.indexOf(shape);
+									parent.magnetizedChildren.splice(indexOfChild, 1);
+									let indexOfParent = shape.magnetizedParents.indexOf(parent);
+									shape.magnetizedParents.splice(indexOfParent, 1);
+								});
+							} else if (shape.magnetizedChildren.length > 0) {
+								const childrenToRemove = [...shape.magnetizedChildren];
+								childrenToRemove.forEach(child => {
+									let indexOfParent = child.magnetizedParents.indexOf(shape);
+									child.magnetizedParents.splice(indexOfParent, 1);
+									let indexOfChild = shape.magnetizedChildren.indexOf(child);
+									shape.magnetizedChildren.splice(indexOfChild, 1);
+								});
+							}
+						});
+					}
 					break;
 				case KeyCode.P:
 					clipboard.forEach(item => {
@@ -399,7 +467,7 @@
 						item.adjustBorderRoundness(1, e.shiftKey);
 					});
 					break;
-				case 77:
+				case KeyCode.M:
 					keyWatcherConfig.mode = KeyWatcherMode.SELECTION_MAGNET;
 					break;
 				case 80:
@@ -512,23 +580,26 @@
 			switch (e.keyCode) {
 				case 74:
 					selectedShapes.forEach(item => {
-						item.scale(0, multiplier.SELECTION_SCALING);
+						item.scale(0, multiplier.SELECTION_SCALING, e.shiftKey);
 					});
 					break;
 				case 75:
 					selectedShapes.forEach(item => {
-						item.scale(0, -multiplier.SELECTION_SCALING);
+						item.scale(0, -multiplier.SELECTION_SCALING, e.shiftKey);
 					});
 					break;
 				case 72:
 					selectedShapes.forEach(item => {
-						item.scale(-multiplier.SELECTION_SCALING, 0);
+						item.scale(-multiplier.SELECTION_SCALING, 0, e.shiftKey);
 					});
 					break;
 				case 76:
 					selectedShapes.forEach(item => {
-						item.scale(multiplier.SELECTION_SCALING, 0);
+						item.scale(multiplier.SELECTION_SCALING, 0, e.shiftKey);
 					});
+					break;
+				case KeyCode.M:
+					keyWatcherConfig.mode = KeyWatcherMode.SELECTION_MAGNET;
 					break;
 				case 84:
 					keyWatcherConfig.mode = KeyWatcherMode.SELECTION_TRANSLATION;
@@ -551,6 +622,9 @@
 					break;
 				case 76:
 					selectedShapes[0].rotate(multiplier.SELECTION_ROTATION);
+					break;
+				case KeyCode.M:
+					keyWatcherConfig.mode = KeyWatcherMode.SELECTION_MAGNET;
 					break;
 				case 84:
 					keyWatcherConfig.mode = KeyWatcherMode.SELECTION_TRANSLATION;
@@ -583,6 +657,9 @@
 					break;
 				case KeyCode.S:
 					keyWatcherConfig.mode = KeyWatcherMode.SELECTION_SCALE;
+					break;
+				case KeyCode.R:
+					keyWatcherConfig.mode = KeyWatcherMode.SELECTION_ROTATE;
 					break;
 				case KeyCode.M:
 					createHints('', e.shiftKey);
@@ -641,13 +718,17 @@
 					}
 					break;
 				case 77:
-					camera.z += 0.0030 * multiplier.STANDARD_TRANSLATION;
+					camera.z += 0.0010 * multiplier.STANDARD_TRANSLATION;
 					if (camera.z > canvasStatus.zMax) {
 						canvasStatus.zMax = camera.z;
 					}
 					break;
 				case 78:
-					camera.z -= 0.0030 * multiplier.STANDARD_TRANSLATION;
+					camera.z -= 0.0010 * multiplier.STANDARD_TRANSLATION;
+
+					if (camera.z <= 0.01) {
+						camera.z = 0.01;
+					}
 					if (camera.z < canvasStatus.zMin) {
 						canvasStatus.zMin = camera.z;
 					}
@@ -691,7 +772,7 @@
 				keyWatcherConfig.mode = KeyWatcherMode.INSERT;
 				break;
 			case 70:
-				createHints('', e.shiftKey);
+				createHints('', e.shiftKey, e.altKey);
 				keyWatcherConfig.mode = KeyWatcherMode.FIND;
 				break;
 			case KeyCode.O:
@@ -708,6 +789,7 @@
 			case KeyCode.B:
 				if (keyWatcherConfig.mode == KeyWatcherMode.STANDARD) {
 					keyWatcherConfig.mode = KeyWatcherMode.BOOKMARKS;
+					createHints('bf', false);
 				}
 				break;
 			case KeyCode.Equal:
@@ -736,10 +818,23 @@
 					shapes.splice(indexOf - 1, 0, selectedShapes[0]);
 				}
 				break;
+			case KeyCode.Q:
+				selectedShapes.forEach(shape => {
+					shape.toggleVisible(false);
+					selectedShapes.length=0;
+				});
+				break;
+			case KeyCode.W:
+				selectedShapes.forEach(shape => {
+					shape.toggleLock(false);
+					selectedShapes.length=0;
+				});
+				break;
 
 		}
 		// }
 	}
+
 </script>
 <main>
 	<KeyWatcherStatus></KeyWatcherStatus>

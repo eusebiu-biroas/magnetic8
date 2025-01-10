@@ -13,8 +13,18 @@
 	import type ShapeSave from '$lib/types/ShapeSave';
 	import { Triangle } from '$lib/shapes/Triangle.svelte';
 	import ShapesToolbar from '$lib/toolbars/ShapesToolbar.svelte';
+	import { ShapeBasic } from '$lib/shapes/ShapeBasic.svelte';
 
-	setContext('canvas', { addRectangle, addText, addShape, draw, saveProgress, loadProgress, saveCanvasToImage });
+	setContext('canvas', {
+		addRectangle,
+		addText,
+		addShape,
+		draw,
+		saveProgress,
+		loadProgress,
+		saveCanvasToImage,
+		addBookmark
+	});
 
 	let canvas: HTMLCanvasElement;
 	let width = $state(0);
@@ -43,6 +53,10 @@
 		if (shape.type == 'check') {
 			newShape = new Check(shape.x, shape.y, shape.z, shape.w, shape.h);
 		}
+		if (shape.type == 'bookmark') {
+			newShape = new ShapeBasic(shape.x, shape.y, shape.z, shape.w, shape.h);
+			newShape.type = 'bookmark';
+		}
 
 		if (newShape) {
 			newShape.r = shape.r;
@@ -57,6 +71,8 @@
 			newShape.lineWidth = shape.lineWidth;
 			newShape.importId = shape.id;
 			newShape.name = shape.name + '_' + shape.id;
+			newShape.visible = shape.visible;
+			newShape.locked = shape.locked;
 			shapes.push(newShape);
 			return newShape;
 		}
@@ -76,7 +92,7 @@
 			const shapesLoaded: ShapeSave[] = JSON.parse(item);
 
 			shapesLoaded.forEach((shapeLoaded: ShapeSave) => {
-				const newShape = loadShape(shapeLoaded);
+				loadShape(shapeLoaded);
 			});
 
 			shapesLoaded.filter(item => item.magnetizedChildrenIds.length > 0).forEach((shapeLoaded: ShapeSave) => {
@@ -150,12 +166,14 @@
 	}
 
 	onMount(async (): Promise<void> => {
-		loadProgress('', false);
+		const defaultLoad = await fetch('/welcome-tutorial.json');
+		loadProgress(await defaultLoad.text(), false);
+		// loadProgress('', false);
 		canvas.width = width;
 		canvas.height = height;
 		await tick();
 		draw();
-		loadImages();
+		// loadImages();
 
 		// addRectangle();
 		// keyWatcherConfig.mode = KeyWatcherMode.SELECTION_MAGNET;
@@ -189,7 +207,9 @@
 				locked: shape.locked,
 				magnetizedChildrenIds: shape.magnetizedChildren.map(item => item.id),
 				id: shape.id,
-				name: shape.name,
+				name: shape.name.replace('_' + shape.id, ''),
+				// name: shape.type,
+
 				opacityColor1: shape.opacityColor1,
 				opacityColor2: shape.opacityColor2,
 				r: shape.r,
@@ -325,14 +345,14 @@
 		gridOld.draw();
 
 		let x = 0;
-		images.forEach(img => {
-			// Scale images to fit canvas if needed
-			const height = canvas.height / 5;
-			const width = (img.width / img.height) * height;
-
-			ctx.drawImage(img, x, 0, width, height);
-			x += width + 10; // Add 10px spacing between images
-		});
+		// images.forEach(img => {
+		// 	// Scale images to fit canvas if needed
+		// 	const height = canvas.height / 5;
+		// 	const width = (img.width / img.height) * height;
+		//
+		// 	ctx.drawImage(img, x, 0, width, height);
+		// 	x += width + 10; // Add 10px spacing between images
+		// });
 
 		shapes.forEach(shape => {
 			ctx.save();
@@ -374,8 +394,8 @@
 	}
 
 
-
 	function handleWheel(event: WheelEvent) {
+		return; //TODO in the next version
 		event.preventDefault();
 
 		const { clientX, clientY, deltaX, deltaY, ctrlKey, altKey } = event;
@@ -435,6 +455,10 @@
 		let x = 100 + camera.x;
 		let y = 200 + camera.y;
 		let z = 1;
+		if(camera.z>1){
+			// x = camera.x + canvas.width / 2 ;
+			// y = camera.Y +canvas.height / 2 ;
+		}
 
 		if (selectedShapes.length > 0) {
 			x = selectedShapes[0].x + selectedShapes[0].w + 100;
@@ -449,6 +473,18 @@
 		selectedShapes.push(rectangle);
 		keyWatcherConfig.mode = KeyWatcherMode.SELECTION_TRANSLATION;
 
+	}
+
+	function addBookmark() {
+		let x = camera.x;
+		let y = camera.y;
+		let z = camera.z;
+
+		let bookmark = new ShapeBasic(x, y, z, 1, 1);
+		bookmark.type = 'bookmark';
+		bookmark.name = 'bookmark_' + bookmark.id;
+		shapes.push(bookmark);
+		// keyWatcherConfig.mode = KeyWatcherMode.S;
 	}
 
 	function addTriangle() {
