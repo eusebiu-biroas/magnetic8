@@ -78,34 +78,29 @@ After selecting a shape, activate magnetic mode by pressing <kbd>M</kbd>:
 
 - Use <kbd>H</kbd>, <kbd>J</kbd>, <kbd>K</kbd>, <kbd>L</kbd> to attract other shapes using the magnetic force, the magnetized shape will change the position to be near the parent shape [TODO]
 - press <kbd>M</kbd> again to magnetize other shapes without changing their position
-- use [TODO] to demagnetize 
+- use <kbd>SHIFT</kbd> + <kbd>M</kbd> to demagnetize 
 
 ### Color Mode
-[TODO]
+- see tutorial in app
 
 ### Border Mode 
-[TODO]
+- see tutorial in app
 
 ### Rename Mode
-[TODO]
+- see tutorial in app
 
 ### Save Mode
-[TODO]
+- save data to image, json or local storage
 
 ### Load Mode
-[TODO]
+- open or import saved data
 
 ### Bookmark mode
 [TODO]
 
 ## Tips & Shortcuts
+[TODO]
 
-### Global Shortcuts
-- <kbd>ESC</kbd> - Return to default mode
-- [TODO]
-
-### Magnetic Shortcuts
-- [TODO] 
 
 ## License
 
